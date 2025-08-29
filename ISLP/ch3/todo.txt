@@ -1,0 +1,4 @@
+learn how to find synergistic effect
+learn to test/look for patterns for other transofrmations than just x^2
+learn how to identify and get the fuck rid of outliars
+zobaczyc jaki performance maja modele innych, albo to co sie dzieje w ksiazce

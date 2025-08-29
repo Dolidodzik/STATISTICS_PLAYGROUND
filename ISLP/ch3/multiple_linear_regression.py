@@ -47,23 +47,13 @@ modelA = sm.OLS(y, X)
 resultsA = modelA.fit()
 print_stats(resultsA, "age and indus dropped")
 
-# non linear model
-Boston['crim_sq'] = Boston['crim'] ** 2
-Boston['zn_sq'] = Boston['zn'] ** 2
-Boston['rm_sq'] = Boston['rm'] ** 2
-Boston['dis_sq'] = Boston['dis'] ** 2
-Boston['ptratio_sq'] = Boston['ptratio'] ** 2
-Boston['lstat_sq'] = Boston['lstat'] ** 2
+all_columns = Boston.columns.drop(['medv', 'age', 'indus']).tolist()
+variables_for_poly = ['crim', 'zn', 'rm', 'dis', 'ptratio', 'lstat']
 
-'''
-stats for model: age and indus dropped, some squared terms
-=
-Adjusted R-squared: 0.820
-F-statistic: 122.41, p-value: 2.1256e-171
-Residual standard error: 3.898
-'''
+linear_terms = [col for col in all_columns if col not in variables_for_poly]
 
-terms = Boston.columns.drop(['medv', 'age', 'indus']) 
+poly_terms = [poly(var, degree=2) for var in variables_for_poly]
+terms = linear_terms + poly_terms
 design = ModelSpec(terms)
 X = design.fit_transform(Boston)
 modelA = sm.OLS(y, X)

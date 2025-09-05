@@ -34,8 +34,8 @@ results1 = model1.fit()
 print_stats(results1, "all variables")
 
 print("vifs:")
-vals = [VIF(X, i) for i in range(1, X.shape [1])]
-vif = pd.DataFrame ({'vif':vals}, index=X.columns [1:])
+vals = [VIF(X, i) for i in range(1, X.shape[1])]
+vif = pd.DataFrame ({'vif':vals}, index=X.columns[1:])
 print(vif)
 
 # medv removed bc we cant have predicted value as prediction, it would defeat the purpouse

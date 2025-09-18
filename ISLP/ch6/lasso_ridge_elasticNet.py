@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.linear_model import Lasso, LinearRegression
+from sklearn.linear_model import Lasso, LinearRegression, Ridge
 from sklearn.model_selection import cross_val_score, KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline, FeatureUnion
@@ -11,24 +11,27 @@ from sklearn.preprocessing import OneHotEncoder, FunctionTransformer
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.impute import KNNImputer
 from sklearn.base import BaseEstimator, TransformerMixin
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
+
 
 
 # useful for targeted transofrmations etc that we know from EDA that might be useful
 class SmartFeatureEngineer(BaseEstimator, TransformerMixin):
     def __init__(self):
+        '''
         self.columns_to_drop = ['dist2', 'dist3', 'dist4']
         self.reciprocal_cols = ['crime_rate', 'poor_prop']
         self.log_cols = ['dist1', 'parks']
         self.square_cols = []
-
-        self.sqrt_cols = []
-
         '''
+        
         self.columns_to_drop = []
         self.reciprocal_cols = []
         self.log_cols = []
         self.square_cols = []
-        '''
 
     def fit(self, X, y=None):
         return self
@@ -104,26 +107,28 @@ for alpha in alphas:
     cv_scores.append(-scores.mean())
 
 optimal_alpha = alphas[np.argmin(cv_scores)]
-print(f'Optimal alpha: {optimal_alpha}')
+print(f'Optimal alpha for lasso: {optimal_alpha}')
 
 lasso_pipeline.set_params(regressor__alpha=optimal_alpha)
 lasso_pipeline.fit(X_train, y_train)
 
-# running the lasso on train set
-y_pred_test = lasso_pipeline.predict(X_test)
-mse = mean_squared_error(y_test, y_pred_test)
-r2 = r2_score(y_test, y_pred_test)
-print("----")
-print(f"Final MSE: {mse:.3f}")
-print(f"Final R²: {r2:.3f}")
-print("----")
-
+'''
 plt.semilogx(alphas, cv_scores)
 plt.xlabel('Alpha')
 plt.ylabel('Mean Squared Error')
 plt.title('LASSO Cross-Validation Results')
 plt.axvline(optimal_alpha, color='red', linestyle='--')
 plt.show()
+'''
+
+# running the lasso on train set
+y_pred_test = lasso_pipeline.predict(X_test)
+mse = mean_squared_error(y_test, y_pred_test)
+r2 = r2_score(y_test, y_pred_test)
+print("-- lasso L1 --")
+print(f"Final MSE: {mse:.3f}")
+print(f"Final R²: {r2:.3f}")
+print("----")
 
 print("lasso coefficeints: ")
 lasso_model = lasso_pipeline.named_steps['regressor']
@@ -162,4 +167,50 @@ GREAT! Much better than without transformations! it turns out adding age to 1/x 
 '''
 
 print("===============================")
-print("doing ridge")
+print("ridge section")
+cv_scores_ridge = []
+
+print("DOING RIDGE L2: ")
+ridge_pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('regressor', Ridge())
+])
+
+for alpha in alphas:
+    ridge_pipeline.set_params(regressor__alpha=alpha)
+    scores = cross_val_score(ridge_pipeline, X_train, y_train, 
+                           cv=kfold, 
+                           scoring='neg_mean_squared_error')
+    cv_scores_ridge.append(-scores.mean())
+
+optimal_alpha_ridge = alphas[np.argmin(cv_scores_ridge)]
+print(f'Optimal alpha for ridge: {optimal_alpha}')
+
+ridge_pipeline.set_params(regressor__alpha=optimal_alpha)
+ridge_pipeline.fit(X_train, y_train)
+
+plt.semilogx(alphas, cv_scores_ridge)
+plt.xlabel('Alpha')
+plt.ylabel('Mean Squared Error')
+plt.title('RIDGE L2 Cross-Validation Results')
+plt.axvline(optimal_alpha_ridge, color='red', linestyle='--')
+plt.show()
+
+y_pred_test_ridge = ridge_pipeline.predict(X_test)
+mse_ridge = mean_squared_error(y_test, y_pred_test_ridge)
+r2_ridge = r2_score(y_test, y_pred_test_ridge)
+
+print("-- ridge L2 --")
+print(f"Final MSE: {mse_ridge:.3f}")
+print(f"Final R²: {r2_ridge:.3f}")
+print("----")
+
+print("RIDGE COEFFICEINTS")
+
+'''
+=
+ridge without transformations:
+Final MSE: 26.713
+Final R²: 0.621
+=
+'''

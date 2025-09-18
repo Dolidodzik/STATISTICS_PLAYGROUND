@@ -61,7 +61,7 @@ print(f"\nNumber of duplicate rows: {houses_df.duplicated().sum()}")
 - slower increase, like ln(x) or sqrt(x) - dist1, dist2, dist3, dist4, parks
 - parabola shape, like x^2 - maybe age, not really sure tho
 '''
-# EDA !TODO! - automatic, crossvalidated possible transforms detection, also automated/manual synergies detection 
+# EDA !TODO! - automatic, crossvalidated possible transforms detection with small and stupid OLS, also automated/manual synergies detection, VIFS
 
 # here we will split datas to validation and test sets, for easier comparisons
 houses_df_clean = houses_df.drop(columns=['bus_ter'])

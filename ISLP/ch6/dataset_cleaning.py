@@ -51,14 +51,17 @@ print(f"sum of all NaNs: \n {houses_df.isna().sum()}") # this confirms that n_ho
 # checking for duplicates
 print(f"\nNumber of duplicate rows: {houses_df.duplicated().sum()}")
 
+'''
 # conclusions, EDA or related to data cleaning:
-# n_hos_beds missing data we will have to do KNN imputation
-# waterbody - we can either drop the column, or mark NaNs as the unknown
-# bus_ter - we have to drop it
-# dist1 2,3,4 all have very big correlation factors, like over 0.99, which means we can try dropping 3 of them and only keeping 1 for predictions
-# scatterplot hyperbola shape (like 1/x) - crime_rate, poor_prop
-# slower increase, like ln(x) or sqrt(x) - dist1, dist2, dist3, dist4, parks
-# parabola shape, like x^2 - maybe age, not really sure tho
+- n_hos_beds missing data we will have to do KNN imputation
+- waterbody - we can either drop the column, or mark NaNs as the unknown
+- bus_ter - we have to drop it
+- dist1 2,3,4 all have very big correlation factors, like over 0.99, which means we can try dropping 3 of them and only keeping 1 for predictions
+- scatterplot hyperbola shape (like 1/x) - crime_rate, poor_prop
+- slower increase, like ln(x) or sqrt(x) - dist1, dist2, dist3, dist4, parks
+- parabola shape, like x^2 - maybe age, not really sure tho
+'''
+# EDA !TODO! - automatic, crossvalidated possible transforms detection, also automated/manual synergies detection 
 
 # here we will split datas to validation and test sets, for easier comparisons
 houses_df_clean = houses_df.drop(columns=['bus_ter'])

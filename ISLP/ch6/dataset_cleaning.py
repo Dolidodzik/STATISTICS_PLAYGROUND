@@ -34,8 +34,7 @@ fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5*n_rows))
 axes = axes.flatten()
 
 for i, col in enumerate(quantitative_cols):
-    axes[i].scatter(houses_df[col], houses_df['price'], alpha=0.6)
-    axes[i].set_xlabel(col)
+    axes[i].scatter(houses_df[col], houses_df['price'], alpha=0.2)
     axes[i].set_ylabel('Price')
     axes[i].set_title(f'Price vs {col}')
 
@@ -52,11 +51,14 @@ print(f"sum of all NaNs: \n {houses_df.isna().sum()}") # this confirms that n_ho
 # checking for duplicates
 print(f"\nNumber of duplicate rows: {houses_df.duplicated().sum()}")
 
-# conclusions, EDA related to data cleaning:
+# conclusions, EDA or related to data cleaning:
 # n_hos_beds missing data we will have to do KNN imputation
 # waterbody - we can either drop the column, or mark NaNs as the unknown
 # bus_ter - we have to drop it
-
+# dist1 2,3,4 all have very big correlation factors, like over 0.99, which means we can try dropping 3 of them and only keeping 1 for predictions
+# scatterplot hyperbola shape (like 1/x) - crime_rate, poor_prop
+# slower increase, like ln(x) or sqrt(x) - dist1, dist2, dist3, dist4, parks
+# parabola shape, like x^2 - maybe age, not really sure tho
 
 # here we will split datas to validation and test sets, for easier comparisons
 houses_df_clean = houses_df.drop(columns=['bus_ter'])

@@ -12,6 +12,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.dummy import DummyRegressor
+from sklearn.model_selection import cross_val_score, KFold
 
 
 
@@ -39,7 +40,7 @@ for i, col in enumerate(quantitative_cols):
     axes[i].set_title(f'Price vs {col}')
 
 plt.tight_layout()
-plt.show()
+#plt.show()
 
 # bus_ter seems to be 100% yes in this dataset, lets check that
 print("value counts for bus_ter:")
@@ -51,17 +52,75 @@ print(f"sum of all NaNs: \n {houses_df.isna().sum()}") # this confirms that n_ho
 # checking for duplicates
 print(f"\nNumber of duplicate rows: {houses_df.duplicated().sum()}")
 
+# automatic good possible transformations detections
+transformation_selection_df = houses_df.select_dtypes(include=['float64', 'int64'])
+num_col_to_test = transformation_selection_df.columns.to_list()
+num_col_to_test.remove('price')
+y_transformation_selection = transformation_selection_df['price']
+
+def square(x):
+    return x ** 2
+
+def linear(x):
+    return x
+
+def natural_log(x):
+    return np.log1p(np.where(x > -1, x, np.nan))
+
+def one_over_x(x):
+    if x == 0:
+        x+=0.0001
+    return 1/x
+
+transformations = [square, linear, natural_log, one_over_x]
+
+kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+
+for column in num_col_to_test:
+    cv_scores = []
+    for transformation in transformations:
+        X = pd.DataFrame({column: transformation_selection_df[column].apply(transformation)})
+        
+        single_feature_pipeline = Pipeline([
+            ('imputer', SimpleImputer(strategy='mean')),
+            ('scaler', StandardScaler()),
+            ('regressor', LinearRegression())
+        ])
+        
+        scores = cross_val_score(single_feature_pipeline, X, y_transformation_selection, cv=kfold, scoring='neg_mean_squared_error')
+        cv_scores.append({
+            'transformation': transformation.__name__,
+            'score': -scores.mean()
+        })
+    cv_scores.sort(key=lambda x: x['score'], reverse=False)
+    
+    print(f"\nColumn: {column}")
+    print("-" * 40)
+    for i, result in enumerate(cv_scores):
+        print(f"{i+1}. {result['transformation']:15} MSE: {result['score']:.4f}")
+
+# synergies detection
+
+print("quitting")
+quit()
+
+# EDA !TODO! - automated/manual synergies detection, VIFS
 '''
 # conclusions, EDA or related to data cleaning:
 - n_hos_beds missing data we will have to do KNN imputation
 - waterbody - we can either drop the column, or mark NaNs as the unknown
 - bus_ter - we have to drop it
 - dist1 2,3,4 all have very big correlation factors, like over 0.99, which means we can try dropping 3 of them and only keeping 1 for predictions
+Scatterplots analysis, predictor plotted against price:
 - scatterplot hyperbola shape (like 1/x) - crime_rate, poor_prop
 - slower increase, like ln(x) or sqrt(x) - dist1, dist2, dist3, dist4, parks
 - parabola shape, like x^2 - maybe age, not really sure tho
+=======
+Automated transformations results, what might use what transformations:
+ln(x) - crime_rate, poor_prop
+x^2   - room_num, age
+1/x   - one_over_x, dist1
 '''
-# EDA !TODO! - automatic, crossvalidated possible transforms detection with small and stupid OLS, also automated/manual synergies detection, VIFS
 
 # here we will split datas to validation and test sets, for easier comparisons
 houses_df_clean = houses_df.drop(columns=['bus_ter'])

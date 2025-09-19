@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.linear_model import Lasso, LinearRegression, Ridge
-from sklearn.model_selection import cross_val_score, KFold
+from sklearn.linear_model import Lasso, LinearRegression, Ridge, ElasticNet
+from sklearn.model_selection import cross_val_score, KFold, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.compose import ColumnTransformer
@@ -22,12 +22,22 @@ warnings.filterwarnings("ignore", category=ConvergenceWarning)
 class SmartFeatureEngineer(BaseEstimator, TransformerMixin):
     def __init__(self):
         '''
+        #manual selection by looking at scatterplots
         self.columns_to_drop = ['dist2', 'dist3', 'dist4']
         self.reciprocal_cols = ['crime_rate', 'poor_prop']
         self.log_cols = ['dist1', 'parks']
         self.square_cols = []
         '''
-        
+
+        '''
+        #automatic transformations selection   
+        self.columns_to_drop = ['dist2', 'dist3', 'dist4']
+        self.reciprocal_cols = ['one_over_x', 'dist1']
+        self.log_cols = ['crime_rate', 'poor_prop']
+        self.square_cols = ['room_num', 'age']
+        '''
+
+        # default, no transformations
         self.columns_to_drop = []
         self.reciprocal_cols = []
         self.log_cols = []
@@ -164,6 +174,11 @@ lasso with specific transformations only for specific columns, selected manually
 Final MSE: 18.834
 Final R²: 0.733
 GREAT! Much better than without transformations! it turns out adding age to 1/x is slighly worse than not adding it, 0.732 vs 0.733
+=
+lasso with specific transformations, selected automatically:
+Final MSE: 17.700
+Final R²: 0.749
+=
 '''
 
 print("===============================")
@@ -184,17 +199,19 @@ for alpha in alphas:
     cv_scores_ridge.append(-scores.mean())
 
 optimal_alpha_ridge = alphas[np.argmin(cv_scores_ridge)]
-print(f'Optimal alpha for ridge: {optimal_alpha}')
+print(f'Optimal alpha for ridge: {optimal_alpha_ridge}')
 
-ridge_pipeline.set_params(regressor__alpha=optimal_alpha)
+ridge_pipeline.set_params(regressor__alpha=optimal_alpha_ridge)
 ridge_pipeline.fit(X_train, y_train)
 
+'''
 plt.semilogx(alphas, cv_scores_ridge)
 plt.xlabel('Alpha')
 plt.ylabel('Mean Squared Error')
 plt.title('RIDGE L2 Cross-Validation Results')
 plt.axvline(optimal_alpha_ridge, color='red', linestyle='--')
 plt.show()
+'''
 
 y_pred_test_ridge = ridge_pipeline.predict(X_test)
 mse_ridge = mean_squared_error(y_test, y_pred_test_ridge)
@@ -206,11 +223,74 @@ print(f"Final R²: {r2_ridge:.3f}")
 print("----")
 
 print("RIDGE COEFFICEINTS")
+ridge_model = ridge_pipeline.named_steps['regressor']
+coefficients = ridge_model.coef_
+feature_names = ridge_pipeline[:-1].get_feature_names_out()
+coef_df = pd.DataFrame({
+    'feature': feature_names,
+    'coefficient': coefficients
+})
 
+print(f"All coefficients count: {coef_df.shape[0]}")
+nonzero_coef_df = coef_df[coef_df['coefficient'] != 0]
+print(f"non zero coefficeints (there are {nonzero_coef_df.shape[0]} of them): ")
+print(nonzero_coef_df)
+print("=======================================")
 '''
 =
 ridge without transformations:
-Final MSE: 26.713
-Final R²: 0.621
+Final MSE: 25.775
+Final R²: 0.634
 =
 '''
+
+print("===============================")
+print("ELASTIC NET: ")
+elastic_net_pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('regressor', ElasticNet())
+])
+
+param_grid = {
+    'regressor__alpha': alphas,
+    'regressor__l1_ratio': [0, 0.1, 0.3, 0.5, 0.7, 0.9, 1]
+}
+
+grid_search = GridSearchCV(elastic_net_pipeline, param_grid, cv=kfold, 
+                           scoring='neg_mean_squared_error', n_jobs=-1)
+grid_search.fit(X_train, y_train)
+
+best_params = grid_search.best_params_
+optimal_alpha_elastic = best_params['regressor__alpha']
+optimal_l1_ratio = best_params['regressor__l1_ratio']
+
+print(f'Optimal alpha for elastic net: {optimal_alpha_elastic}')
+print(f'Optimal l1_ratio for elastic net: {optimal_l1_ratio}')
+
+elastic_net_pipeline.set_params(regressor__alpha=optimal_alpha_elastic,
+                               regressor__l1_ratio=optimal_l1_ratio)
+elastic_net_pipeline.fit(X_train, y_train)
+
+y_pred_test_elastic = elastic_net_pipeline.predict(X_test)
+mse_elastic = mean_squared_error(y_test, y_pred_test_elastic)
+r2_elastic = r2_score(y_test, y_pred_test_elastic)
+
+print("-- Elastic Net --")
+print(f"Final MSE: {mse_elastic:.3f}")
+print(f"Final R²: {r2_elastic:.3f}")
+print("----")
+
+print("ELASTIC NET COEFFICIENTS")
+elastic_model = elastic_net_pipeline.named_steps['regressor']
+coefficients = elastic_model.coef_
+feature_names = elastic_net_pipeline[:-1].get_feature_names_out()
+coef_df = pd.DataFrame({
+    'feature': feature_names,
+    'coefficient': coefficients
+})
+
+print(f"all coefficients count: {coef_df.shape[0]}")
+nonzero_coef_df = coef_df[coef_df['coefficient'] != 0]
+print(f"non zero coefficients (there are {nonzero_coef_df.shape[0]} of them): ")
+print(nonzero_coef_df)
+print("=======================================")
